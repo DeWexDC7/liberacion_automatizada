@@ -16,7 +16,7 @@ REGION= "R2"
 ZONA= "URB. ARRECIFE + URB. LA PENINSULA + URB. CANTABRIA + URB. LA ENSENADA"
 PARROQUIA= "LA PUNTILLA"
 FEEDER= "T28"
-CLUSTER= "Daniel"
+CLUSTER= "G6C034"
 HORIZONTAL_RESIDENCIAL_HPs= 15
 HORIZONTAL_COMERCIAL_HPs= 0
 VERTICAL_RESIDENCIAL_HPs= 397
@@ -26,6 +26,8 @@ EDIF_RESID_PROYECTADOS_HPs= 0
 EDIF_COMERCIAL_PROYECTADOS_HPs= 0
 SOLARES= 83
 HPs_TOTALES= 495
+PUERTOS_HABILITADOS= 720
+
 
 #funcion para hash + clouster
 def id_hash_cluster():
@@ -103,16 +105,34 @@ def exportar_excel_alcance(datos, ruta_archivo=f"generador/alcance_{CLUSTER}.xls
         # Generar un nuevo hash ID para la fila de totales
         totales['id'] = id_hash_cluster()
         
-        # Campos numéricos a sumar
-        campos_numericos = [
-            'puertos_habilitados', 'hps_liberadas', 'home_passes', 'business_passes',
-            'hp_horizontal_res', 'hp_horizontal_com', 'hp_vertical_res', 'hp_vertical_com',
-            'edif_res', 'edif_com', 'solares_res'
-        ]
+        # Campos numéricos a sumar y su correspondencia con las variables globales
+        suma_bd = {}
         
-        # Calcular las sumas de los campos numéricos
-        for campo in campos_numericos:
-            totales[campo] = df[campo].sum()
+        # Sumar primero los valores de la base de datos
+        suma_bd['puertos_habilitados'] = df['puertos_habilitados'].sum()
+        suma_bd['hps_liberadas'] = df['hps_liberadas'].sum()
+        suma_bd['home_passes'] = df['home_passes'].sum()
+        suma_bd['business_passes'] = df['business_passes'].sum()
+        suma_bd['hp_horizontal_res'] = df['hp_horizontal_res'].sum()
+        suma_bd['hp_horizontal_com'] = df['hp_horizontal_com'].sum()
+        suma_bd['hp_vertical_res'] = df['hp_vertical_res'].sum()
+        suma_bd['hp_vertical_com'] = df['hp_vertical_com'].sum()
+        suma_bd['edif_res'] = df['edif_res'].sum()
+        suma_bd['edif_com'] = df['edif_com'].sum()
+        suma_bd['solares_res'] = df['solares_res'].sum()
+        
+        # Calcular la diferencia entre variables globales y valores de BD
+        totales['puertos_habilitados'] = PUERTOS_HABILITADOS - suma_bd['puertos_habilitados']
+        totales['hps_liberadas'] = HPs_TOTALES - suma_bd['hps_liberadas']
+        totales['home_passes'] = (HPs_TOTALES - HORIZONTAL_COMERCIAL_HPs - VERTICAL_COMERCIAL_HPs) - suma_bd['home_passes']
+        totales['business_passes'] = (HORIZONTAL_COMERCIAL_HPs + VERTICAL_COMERCIAL_HPs) - suma_bd['business_passes']
+        totales['hp_horizontal_res'] = HORIZONTAL_RESIDENCIAL_HPs - suma_bd['hp_horizontal_res']
+        totales['hp_horizontal_com'] = HORIZONTAL_COMERCIAL_HPs - suma_bd['hp_horizontal_com']
+        totales['hp_vertical_res'] = VERTICAL_RESIDENCIAL_HPs - suma_bd['hp_vertical_res']
+        totales['hp_vertical_com'] = VERTICAL_COMERCIAL_HPs - suma_bd['hp_vertical_com']
+        totales['edif_res'] = EDIF_RESID_PROYECTADOS_HPs - suma_bd['edif_res']
+        totales['edif_com'] = EDIF_COMERCIAL_PROYECTADOS_HPs - suma_bd['edif_com']
+        totales['solares_res'] = SOLARES - suma_bd['solares_res']
         
         # Usar fechas actuales para las fechas
         totales['fecha_liberacion'] = hoy
@@ -132,7 +152,7 @@ def exportar_excel_alcance(datos, ruta_archivo=f"generador/alcance_{CLUSTER}.xls
             totales['tipo_cobertura'] = ultimo_registro['tipo_cobertura']
             totales['region'] = ultimo_registro['region']
             totales['parroquia'] = ultimo_registro['parroquia']
-            totales['observacion'] = ultimo_registro['observacion']
+            totales['observacion'] = f"{ultimo_registro['observacion']} - Pendiente: {totales['home_passes']} Home Passes"
             totales['tipo_red'] = ultimo_registro['tipo_red']
         
         # Agregar la fila de totales al DataFrame
@@ -156,8 +176,13 @@ def exportar_excel_alcance(datos, ruta_archivo=f"generador/alcance_{CLUSTER}.xls
             for col in range(1, len(encabezados) + 1):
                 celda = worksheet.cell(row=ultima_fila, column=col)
                 celda.font = Font(bold=True)
+                
+            # Añadir comentario explicativo usando la clase Comment correctamente
+            from openpyxl.comments import Comment
+            comment = Comment(text="Valores pendientes: Variables globales menos los registros existentes.", author="Sistema")
+            worksheet.cell(row=ultima_fila, column=1).comment = comment
             
-        print(f"Archivo Excel con totales exportado en {ruta_archivo}")
+        print(f"Archivo Excel con totales pendientes exportado en {ruta_archivo}")
         return ruta_archivo
         
     except Exception as e:
@@ -208,7 +233,7 @@ def caso_liberacion():
             'nombre': CLUSTER,
             'zona_cobertura': ZONA,
             'canton': 'SAMBORONDON',
-            'puertos_habilitados': HPs_TOTALES,
+            'puertos_habilitados': PUERTOS_HABILITADOS,
             'hps_liberadas': HPs_TOTALES, 
             'home_passes': HPs_TOTALES - HORIZONTAL_COMERCIAL_HPs - VERTICAL_COMERCIAL_HPs,
             'business_passes': HORIZONTAL_COMERCIAL_HPs + VERTICAL_COMERCIAL_HPs,
