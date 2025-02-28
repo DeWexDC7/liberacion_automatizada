@@ -1,0 +1,10 @@
+{
+    "PostgresSQL": 
+    {
+      "host": "192.168.39.172",
+      "database": "etl",
+      "user": "etlread",
+      "password": "r3P4t1$E20",
+      "port" : 5432
+    }
+}
